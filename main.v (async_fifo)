@@ -26,6 +26,7 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
 
     reg [15:0] mem [0:SIZE-1];
 
+    //Fall through for enable signals
     wire wr_en_true = wr_en && !full;
     wire rd_en_true = rd_en && !empty;
 
@@ -34,6 +35,7 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
         if (rst) begin
             wr_bin_pointer <= 0;
         end
+        //indexes memory with pointer and counter
         else if (wr_en_true) begin
             mem[wr_bin_pointer[DEPTH-1:0]] <= din;
             wr_bin_pointer <= wr_bin_pointer + 1'b1;
@@ -51,9 +53,11 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
         end
     end
 
+    //Bin2Gray
     assign wr_gray_pointer = wr_bin_pointer ^ (wr_bin_pointer >> 1);
     assign rd_gray_pointer = rd_bin_pointer ^ (rd_bin_pointer >> 1);
 
+    //Double flop sync
     always @(posedge rd_clk or posedge rst) begin
         if (rst) begin
             wr_gray_sync_1 <= 0;
@@ -70,7 +74,7 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
             empty <= 1'b1;
         end
         else begin
-            empty <= (rd_gray_pointer == wr_gray_sync_2);
+            empty <= (rd_gray_pointer == wr_gray_sync_2); //empty logic
         end
     end
 
@@ -90,6 +94,7 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
             full <= 1'b0;
         end
         else begin
+            //full logic
             full <= (wr_gray_pointer == {
                 ~rd_gray_sync_2[DEPTH:DEPTH-1],
                  rd_gray_sync_2[DEPTH-2:0]
