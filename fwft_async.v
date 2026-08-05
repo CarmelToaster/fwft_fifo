@@ -6,9 +6,10 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
     output reg full,
     input wire [15:0] din,
     input wire rd_clk,
-    output reg empty,
+    output wire empty,
     input wire wr_en,
     input wire rd_en,
+    output reg dout_valid,
     output reg [15:0] dout
 );
 
@@ -26,10 +27,12 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
 
     reg [15:0] mem [0:SIZE-1];
 
+    reg fifo_empty;
+    assign empty = !dout_valid;
+
     //Fall through for enable signals
     wire wr_en_true = wr_en && !full;
-    wire rd_en_true = rd_en && !empty;
-
+    wire fetch = (!dout_valid && !fifo_empty) || (rd_en && dout_valid);
 
     always @(posedge wr_clk or posedge rst) begin
         if (rst) begin
@@ -46,10 +49,17 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
         if (rst) begin
             rd_bin_pointer <= 0;
             dout <= 0;
-        end
-        else if (rd_en_true) begin
+            dout_valid <= 0;
+        
+        end else if (rd_en && dout_valid && fifo_empty) begin
+            dout_valid <= 0;
+        
+        end else if (fetch) begin
             dout <= mem[rd_bin_pointer[DEPTH-1:0]];
             rd_bin_pointer <= rd_bin_pointer + 1'b1;
+            dout_valid <= 1'b1;
+        end else begin
+            dout_valid <= dout_valid;
         end
     end
 
@@ -71,10 +81,10 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
 
     always @(posedge rd_clk or posedge rst) begin
         if (rst) begin
-            empty <= 1'b1;
+            fifo_empty <= 1'b1;
         end
         else begin
-            empty <= (rd_gray_pointer == wr_gray_sync_2); //empty logic
+            fifo_empty <= (rd_gray_pointer == wr_gray_sync_2);    
         end
     end
 
