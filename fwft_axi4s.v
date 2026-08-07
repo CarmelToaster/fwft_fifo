@@ -30,9 +30,11 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
     reg fifo_empty;
     assign empty = !dout_valid;
 
+    wire t_valid = dout_valid;
+    
     //Fall through for enable signals
     wire wr_en_true = wr_en && !full;
-    wire fetch = (!dout_valid && !fifo_empty) || (rd_en && dout_valid);
+    wire consume = t_valid && t_ready; 
 
     always @(posedge wr_clk or posedge rst) begin
         if (rst) begin
@@ -44,20 +46,22 @@ module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
             wr_bin_pointer <= wr_bin_pointer + 1'b1;
         end
     end
-
+//Dont make it sequential
     always @(posedge rd_clk or posedge rst) begin
-        if (rst) begin
+        if(rst) begin
             rd_bin_pointer <= 0;
             dout <= 0;
             dout_valid <= 0;
-        
-        end else if (rd_en && dout_valid && fifo_empty) begin
-            dout_valid <= 0;
-        
-        end else if (fetch) begin
-            dout <= mem[rd_bin_pointer[DEPTH-1:0]];
-            rd_bin_pointer <= rd_bin_pointer + 1'b1;
-            dout_valid <= 1'b1;
+
+        end else if(consume || (!dout_valid && !fifo_empty)) begin //valid and ready high
+            if(!fifo_empty) begin 
+                dout <= mem[rd_bin_pointer[DEPTH-1:0]];
+                rd_bin_pointer <= rd_bin_pointer + 1'b1;
+                dout_valid <= 1'b1;
+            
+            end else begin
+                dout_valid<= 1'b1;
+    
         end else begin
             dout_valid <= dout_valid;
         end
