@@ -2,7 +2,7 @@
 
 module iq_gen #(
     parameter PW = 32,
-    parameter ADDR_WIDTH = 8 //2^8 = 256 bits
+    parameter ADDR_WIDTH = 8
 )(
     input  wire clk,
     input  wire rst,
@@ -25,7 +25,7 @@ always @(posedge clk or posedge rst) begin
 end
 
 wire [ADDR_WIDTH-1:0] i_index;
-assign i_index = phase[PW-1 : PW-ADDR_WIDTH];
+assign i_index = phase[PW-1 : PW-ADDR_WIDTH]; //Just the top 8 bits for 256 states
     
 initial begin
     sine_lut[0] = 16'sd0;
