@@ -6,9 +6,7 @@ module iq_gen #(
 )(
     input  wire clk,
     input  wire rst,
-
     input  wire [PW-1:0] phase_step,
-
     output wire signed [15:0] i_out,
     output wire signed [15:0] q_out
 );
