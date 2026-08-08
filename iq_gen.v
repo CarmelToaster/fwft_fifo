@@ -13,8 +13,6 @@ module iq_gen #(
     output wire signed [15:0] q_out
 );
 
-reg [PW-1:0] phase;
-
 //Phase accum
 always @(posedge clk or posedge rst) begin
     if (rst) begin
@@ -25,7 +23,16 @@ always @(posedge clk or posedge rst) begin
 end
 
 wire [ADDR_WIDTH-1:0] i_index;
-assign i_index = phase[PW-1 : PW-ADDR_WIDTH]; //Just the top 8 bits for 256 states
+assign i_index = phase[PW-1 : PW-ADDR_WIDTH];
+
+// 90° phase shift for Q
+wire [PW-1:0] q_phase;
+assign q_phase = phase + (1 << (PW-2));  // +90 degrees
+
+wire [ADDR_WIDTH-1:0] q_index;
+assign q_index = q_phase[PW-1 : PW-ADDR_WIDTH];
+
+reg signed [15:0] sine_lut [0:(1<<ADDR_WIDTH)-1];
     
 initial begin
     sine_lut[0] = 16'sd0;
