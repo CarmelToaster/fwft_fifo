@@ -11,3 +11,5 @@ module iq_axi_stream #(
     output wire tvalid,
     input  wire tready
 );
+
+    if(tvalid && tready)
