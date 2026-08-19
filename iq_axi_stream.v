@@ -4,26 +4,23 @@ module iq_axi_stream #(
     parameter PW = 32,
     parameter ADDR_WIDTH = 8
 )(
-    input  wire clk,
-    input  wire rst,
-
-    input  wire [PW-1:0] phase_step,
-
-    // AXI4-Stream output
+    input wire clk,
+    input wire rst,
+    input wire [PW-1:0] phase_step,
     output wire [31:0] tdata,
-    output wire        tvalid,
-    input  wire        tready
+    output wire tvalid,
+    input wire tready
 );
 
     reg [PW-1:0] phase;
 
-    wire advance;
-    assign advance = tready;
+    wire nxt_phase;
+    assign nxt_phase = tvalid && tready; //Handshake
 
     always @(posedge clk or posedge rst) begin
         if (rst)
             phase <= 0;
-        else if (advance)
+        else if (nxt_phase)
             phase <= phase + phase_step;
     end
 
@@ -31,7 +28,7 @@ module iq_axi_stream #(
     assign i_index = phase[PW-1 : PW-ADDR_WIDTH];
 
     wire [PW-1:0] q_phase;
-    assign q_phase = phase + (1 << (PW-2));  // 90° shift
+    assign q_phase = phase + (1 << (PW-2)); //cos shift
 
     wire [ADDR_WIDTH-1:0] q_index;
     assign q_index = q_phase[PW-1 : PW-ADDR_WIDTH];
@@ -304,6 +301,8 @@ module iq_axi_stream #(
     assign q_sample = sine_lut[q_index];
 
     assign tdata  = {i_sample, q_sample};
+
+    // Generator always has a sample available
     assign tvalid = 1'b1;
 
 endmodule
