@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module mfwft_axi4s #(
+module fwft_axi4s #(
     parameter DEPTH = 5,
     parameter SIZE  = 2**DEPTH
 )(
@@ -9,9 +9,7 @@ module mfwft_axi4s #(
     input  wire wr_en,
     input  wire [31:0] din,
     output reg  full,
-    input  wire rd_clk,
-    input  wire t_ready,   
-    output wire t_valid,   
+    input  wire rd_clk,  
     output reg  [31:0] dout,
     output wire empty
 );
@@ -33,7 +31,6 @@ module mfwft_axi4s #(
     assign t_valid = dout_valid;
     assign empty = !dout_valid;
 
-    wire consume = t_valid && t_ready;
     wire wr_en_true = wr_en && !full;
 
     always @(posedge wr_clk or posedge rst) begin
