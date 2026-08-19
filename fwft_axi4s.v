@@ -1,18 +1,18 @@
 `timescale 1ns / 1ps
 
-module main #(
+module mfwft_axi4s #(
     parameter DEPTH = 5,
     parameter SIZE  = 2**DEPTH
 )(
     input  wire rst,
     input  wire wr_clk,
     input  wire wr_en,
-    input  wire [15:0] din,
+    input  wire [31:0] din,
     output reg  full,
     input  wire rd_clk,
     input  wire t_ready,   
     output wire t_valid,   
-    output reg  [15:0] dout,
+    output reg  [31:0] dout,
     output wire empty
 );
     
@@ -25,7 +25,7 @@ module main #(
     reg [DEPTH:0] wr_gray_sync_1, wr_gray_sync_2;
     reg [DEPTH:0] rd_gray_sync_1, rd_gray_sync_2;
 
-    reg [15:0] mem [0:SIZE-1];
+    reg [31:0] mem [0:SIZE-1];
 
     reg fifo_empty;
     reg dout_valid;
