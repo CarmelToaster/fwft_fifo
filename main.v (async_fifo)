@@ -1,105 +1,66 @@
 `timescale 1ns / 1ps
 
-module main#(parameter DEPTH = 5, SIZE = 2**DEPTH)(
-    input wire rst,
-    input wire wr_clk,
-    output reg full,
-    input wire [15:0] din,
-    input wire rd_clk,
-    output reg empty,
-    input wire wr_en,
-    input wire rd_en,
-    output reg [15:0] dout
+module main #(
+    parameter DEPTH = 5,
+    parameter SIZE  = 2**DEPTH
+)(
+    input  wire        rst,
+    input  wire        wr_clk,
+    input  wire        rd_clk,
+    input  wire [31:0] phase_step,
+    output wire [31:0] tdata,
+    output wire        tvalid,
+    input  wire        tready
 );
 
-    reg [DEPTH:0] wr_bin_pointer;
-    reg [DEPTH:0] rd_bin_pointer;
+    wire [31:0] iq_data;
+    wire        iq_valid;
+    wire        iq_ready;
 
-    wire [DEPTH:0] wr_gray_pointer;
-    wire [DEPTH:0] rd_gray_pointer;
+    wire [31:0] fifo_dout;
+    wire        fifo_empty;
+    wire        fifo_full;
 
-    reg [DEPTH:0] wr_gray_sync_1;
-    reg [DEPTH:0] wr_gray_sync_2;
+    wire fifo_rd_en;
+    wire fifo_wr_en;
 
-    reg [DEPTH:0] rd_gray_sync_1;
-    reg [DEPTH:0] rd_gray_sync_2;
+    iq_generator #(
+        .PW(32),
+        .ADDR_WIDTH(8)
+    ) u_iq_generator (
+        .clk        (wr_clk),
+        .rst        (rst),
+        .phase_step (phase_step),
 
-    reg [15:0] mem [0:SIZE-1];
+        .iq_data    (iq_data),
+        .iq_valid   (iq_valid),
+        .iq_ready   (iq_ready)
+    );
 
-    //Fall through for enable signals
-    wire wr_en_true = wr_en && !full;
-    wire rd_en_true = rd_en && !empty;
+    assign fifo_wr_en = iq_valid && !fifo_full;
 
+    assign iq_ready = !fifo_full;
 
-    always @(posedge wr_clk or posedge rst) begin
-        if (rst) begin
-            wr_bin_pointer <= 0;
-        end
-        //indexes memory with pointer and counter
-        else if (wr_en_true) begin
-            mem[wr_bin_pointer[DEPTH-1:0]] <= din;
-            wr_bin_pointer <= wr_bin_pointer + 1'b1;
-        end
-    end
+    assign fifo_rd_en = tvalid && tready;
 
-    always @(posedge rd_clk or posedge rst) begin
-        if (rst) begin
-            rd_bin_pointer <= 0;
-            dout <= 0;
-        end
-        else if (rd_en_true) begin
-            dout <= mem[rd_bin_pointer[DEPTH-1:0]];
-            rd_bin_pointer <= rd_bin_pointer + 1'b1;
-        end
-    end
+    fwft_axi4s #(
+        .DEPTH(DEPTH),
+        .SIZE (SIZE)
+    ) u_fifo (
+        .rst    (rst),
 
-    //Bin2Gray
-    assign wr_gray_pointer = wr_bin_pointer ^ (wr_bin_pointer >> 1);
-    assign rd_gray_pointer = rd_bin_pointer ^ (rd_bin_pointer >> 1);
+        .wr_clk (wr_clk),
+        .wr_en  (fifo_wr_en),
+        .din    (iq_data),
+        .full   (fifo_full),
 
-    //Double flop sync
-    always @(posedge rd_clk or posedge rst) begin
-        if (rst) begin
-            wr_gray_sync_1 <= 0;
-            wr_gray_sync_2 <= 0;
-        end
-        else begin
-            wr_gray_sync_1 <= wr_gray_pointer;
-            wr_gray_sync_2 <= wr_gray_sync_1;
-        end
-    end
+        .rd_clk (rd_clk),
+        .rd_en  (fifo_rd_en),
+        .dout   (fifo_dout),
+        .empty  (fifo_empty)
+    );
 
-    always @(posedge rd_clk or posedge rst) begin
-        if (rst) begin
-            empty <= 1'b1;
-        end
-        else begin
-            empty <= (rd_gray_pointer == wr_gray_sync_2); //empty logic
-        end
-    end
-
-    always @(posedge wr_clk or posedge rst) begin
-        if (rst) begin
-            rd_gray_sync_1 <= 0;
-            rd_gray_sync_2 <= 0;
-        end
-        else begin
-            rd_gray_sync_1 <= rd_gray_pointer;
-            rd_gray_sync_2 <= rd_gray_sync_1;
-        end
-    end
-
-    always @(posedge wr_clk or posedge rst) begin
-        if (rst) begin
-            full <= 1'b0;
-        end
-        else begin
-            //full logic
-            full <= (wr_gray_pointer == {
-                ~rd_gray_sync_2[DEPTH:DEPTH-1],
-                 rd_gray_sync_2[DEPTH-2:0]
-            });
-        end
-    end
+    assign tdata  = fifo_dout;
+    assign tvalid = !fifo_empty;
 
 endmodule
