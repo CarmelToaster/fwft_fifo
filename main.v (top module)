@@ -2,24 +2,24 @@
 
 module main #(
     parameter DEPTH = 5,
-    parameter SIZE  = 2**DEPTH
+    parameter SIZE = 2**DEPTH
 )(
-    input  wire        rst,
-    input  wire        wr_clk,
-    input  wire        rd_clk,
+    input  wire rst,
+    input  wire wr_clk,
+    input  wire rd_clk,
     input  wire [31:0] phase_step,
     output wire [31:0] tdata,
-    output wire        tvalid,
-    input  wire        tready
+    output wire tvalid,
+    input  wire tready
 );
 
     wire [31:0] iq_data;
-    wire        iq_valid;
-    wire        iq_ready;
+    wire iq_valid;
+    wire iq_ready;
 
     wire [31:0] fifo_dout;
-    wire        fifo_empty;
-    wire        fifo_full;
+    wire fifo_empty;
+    wire fifo_full;
 
     wire fifo_rd_en;
     wire fifo_wr_en;
@@ -28,36 +28,31 @@ module main #(
         .PW(32),
         .ADDR_WIDTH(8)
     ) u_iq_generator (
-        .clk        (wr_clk),
-        .rst        (rst),
-        .phase_step (phase_step),
-
-        .iq_data    (iq_data),
-        .iq_valid   (iq_valid),
-        .iq_ready   (iq_ready)
+        .clk(wr_clk),
+        .rst(rst),
+        .phase_step(phase_step),
+        .iq_data(iq_data),
+        .iq_valid(iq_valid),
+        .iq_ready(iq_ready)
     );
 
     assign fifo_wr_en = iq_valid && !fifo_full;
-
     assign iq_ready = !fifo_full;
-
     assign fifo_rd_en = tvalid && tready;
 
     fwft_axi4s #(
         .DEPTH(DEPTH),
-        .SIZE (SIZE)
-    ) u_fifo (
-        .rst    (rst),
-
-        .wr_clk (wr_clk),
-        .wr_en  (fifo_wr_en),
-        .din    (iq_data),
-        .full   (fifo_full),
-
-        .rd_clk (rd_clk),
-        .rd_en  (fifo_rd_en),
-        .dout   (fifo_dout),
-        .empty  (fifo_empty)
+        .SIZE(SIZE)
+    ) u_fifo(
+        .rstrst),
+        .wr_clk(wr_clk),
+        .wr_en(fifo_wr_en),
+        .din(iq_data),
+        .full(fifo_full),
+        .rd_clk(rd_clk),
+        .rd_en(fifo_rd_en),
+        .dout(fifo_dout),
+        .empty(fifo_empty)
     );
 
     assign tdata  = fifo_dout;
